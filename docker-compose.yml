@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: gpt_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-game_price_tracker}
+      MYSQL_USER: ${MYSQL_USER:-gpt_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-gpt_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - gpt_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: gpt_app
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # Discord
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+
+      # Database
+      DATABASE_URL: mysql+aiomysql://${MYSQL_USER:-gpt_user}:${MYSQL_PASSWORD:-gpt_password}@mysql:3306/${MYSQL_DATABASE:-game_price_tracker}
+
+      # Scheduler
+      NOTIFICATION_HOUR: ${NOTIFICATION_HOUR:-15}
+      NOTIFICATION_MINUTE: ${NOTIFICATION_MINUTE:-0}
+
+      # Scraper
+      HEADLESS: ${HEADLESS:-true}
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+    networks:
+      - gpt_network
+
+volumes:
+  mysql_data:
+
+networks:
+  gpt_network:
+    driver: bridge
