@@ -42,6 +42,10 @@ class Game(Base):
     image_url = Column(Text, nullable=True)
     description = Column(Text, nullable=True)
 
+    # Price history tracking
+    lowest_price = Column(Float, nullable=True)
+    lowest_price_date = Column(DateTime, nullable=True)
+
     # Relationships
     tracked_by = relationship("TrackedGame", back_populates="game", cascade="all, delete-orphan")
     price_history = relationship("PriceHistory", back_populates="game", cascade="all, delete-orphan")

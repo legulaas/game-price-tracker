@@ -158,6 +158,24 @@ class GameCommands(commands.Cog):
                         inline=True
                     )
 
+                    # Show historical low if available
+                    if game and game.lowest_price:
+                        embed.add_field(
+                            name="Menor Preço Histórico",
+                            value=f"R$ {game.lowest_price:.2f}",
+                            inline=True
+                        )
+
+                        # Calculate if current price is good
+                        if game.current_price and game.lowest_price > 0:
+                            diff_percent = ((game.current_price - game.lowest_price) / game.lowest_price) * 100
+                            if diff_percent <= 10:
+                                embed.add_field(
+                                    name="💰 Oportunidade",
+                                    value="Preço próximo do histórico mínimo!",
+                                    inline=False
+                                )
+
                     embed.set_footer(text=f"Game ID: {game.id}" if game else "")
 
                     await ctx.send(embed=embed)

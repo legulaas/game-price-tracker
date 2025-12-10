@@ -73,6 +73,10 @@ class GameService:
                     await self.session.refresh(existing_game)
                     logger.info(f"Updated game: {existing_game.title}")
 
+                # Fetch price history if not already set
+                if existing_game.lowest_price is None:
+                    await self._fetch_and_update_price_history(existing_game)
+
                 return existing_game
 
             # Create new game
@@ -96,6 +100,9 @@ class GameService:
             # Add initial price history
             if new_game.current_price is not None:
                 await self._add_price_history(new_game.id, new_game.current_price)
+
+            # Fetch historical low price from PSPrices
+            await self._fetch_and_update_price_history(new_game)
 
             logger.info(f"Created new game: {new_game.title}")
             return new_game
@@ -177,6 +184,34 @@ class GameService:
         except Exception as e:
             logger.error(f"Error adding price history: {e}")
             await self.session.rollback()
+
+    async def _fetch_and_update_price_history(self, game: Game):
+        """
+        Fetch historical low price from PSPrices and update the game.
+
+        Args:
+            game: Game instance to update
+        """
+        try:
+            from ..scraper.psprices import PSPricesScraper
+
+            logger.info(f"Fetching price history for: {game.title}")
+            async with PSPricesScraper(headless=True) as psprices:
+                history_data = await psprices.get_price_history(game.title, game.platform.lower())
+
+            if history_data.get("lowest_price"):
+                game.lowest_price = history_data["lowest_price"]
+                game.lowest_price_date = history_data.get("lowest_price_date")
+                await self.session.commit()
+                await self.session.refresh(game)
+                logger.info(f"Updated lowest price for {game.title}: R$ {game.lowest_price:.2f}")
+            else:
+                logger.info(f"No historical price found for {game.title}")
+
+        except Exception as e:
+            logger.error(f"Error fetching price history from PSPrices: {e}")
+            # Don't fail the whole operation if price history fetch fails
+            pass
 
     async def get_game_price_history(self, game_id: int, limit: int = 30) -> List[PriceHistory]:
         """

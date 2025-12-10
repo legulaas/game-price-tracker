@@ -258,8 +258,25 @@ class PlayStationScraper(BaseScraper):
             # Get image
             image_url = await self.safe_get_attribute(page, 'img[src*="image.api.playstation"], img[data-qa*="product"]', "src")
 
-            # Get description
-            description = await self.safe_get_text(page, '[data-qa*="description"], p')
+            # Get description - try multiple selectors, avoiding user reviews
+            description_selectors = [
+                '[data-qa="mfe-game-overview#description"]',
+                '[data-qa*="description"]:not([data-qa*="review"])',
+                '.psw-game-description',
+                'div[class*="description"] p:first-child',
+                'section[data-qa*="overview"] p'
+            ]
+
+            description = ""
+            for selector in description_selectors:
+                desc = await self.safe_get_text(page, selector)
+                if desc and len(desc) > 50:  # Valid description should be longer
+                    # Check if it's not a review (reviews usually contain first person language)
+                    review_indicators = ["eu sempre", "eu gostei", "eu vi", "minha vida", "me ensinou"]
+                    is_review = any(indicator in desc.lower() for indicator in review_indicators)
+                    if not is_review:
+                        description = desc
+                        break
 
             details = {
                 "title": title.strip(),
@@ -283,16 +300,24 @@ class PlayStationScraper(BaseScraper):
     @staticmethod
     def _parse_price(price_text: str) -> float:
         """Parse price string to float (Brazilian format)."""
-        if "Gratuito" in price_text or "Free" in price_text or "Grátis" in price_text or "Incluído" in price_text:
-            return 0.0
+        # Check for truly free games (ignore "Incluído" which means included in subscription)
+        if "Gratuito" in price_text or "Free" in price_text or "Grátis" in price_text:
+            # But check if there's still a price mentioned
+            if "R$" not in price_text:
+                return 0.0
 
-        # Try to extract first price pattern (R$ XX,XX or R$XX,XX)
+        # Try to extract price patterns (R$ XX,XX or R$XX,XX)
+        # When "Incluído" is present, there's usually a price mentioned after
         price_pattern = r'R\$\s*(\d+(?:\.\d{3})*,\d{2})'
         matches = re.findall(price_pattern, price_text)
 
         if matches:
-            # Use the first price found (usually the current/sale price)
-            price_clean = matches[0]
+            # If "Incluído" is in text, use the LAST price found (original price)
+            # Otherwise use the FIRST price (current/sale price)
+            if "Incluído" in price_text or "included" in price_text.lower():
+                price_clean = matches[-1]  # Get last price (original price)
+            else:
+                price_clean = matches[0]  # Get first price (current price)
         else:
             # Fallback: remove all non-numeric except comma and period
             price_clean = re.sub(r'[^\d.,]', '', price_text)
