@@ -36,6 +36,8 @@ class TrackerCommands(commands.Cog):
                     platform = "gog"
                 elif "playstation.com" in game_url:
                     platform = "playstation"
+                elif "nintendo.com" in game_url:
+                    platform = "nintendo"
 
                 async with AsyncSessionLocal() as session:
                     game_service = GameService(session)
@@ -75,6 +77,10 @@ class TrackerCommands(commands.Cog):
                         description=f"**{ctx.author.mention}** O jogo **{game.title}** está sendo rastreado!",
                         color=discord.Color.green()
                     )
+
+                    # Add game image if available
+                    if game.image_url:
+                        embed.set_image(url=game.image_url)
 
                     embed.add_field(
                         name="Preço Atual",

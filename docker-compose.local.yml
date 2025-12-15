@@ -11,7 +11,7 @@ services:
       MYSQL_USER: ${MYSQL_USER:-gpt_user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-gpt_password}
     ports:
-      - "3306:3306"
+      - "3309:3306"
     volumes:
       - mysql_data_local:/var/lib/mysql
     networks:

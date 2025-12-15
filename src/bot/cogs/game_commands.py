@@ -37,7 +37,7 @@ class GameCommands(commands.Cog):
                 platform = platform.lower()
 
                 # If platform is not valid, assume it's part of the query
-                valid_platforms = ["steam", "playstation", "psn", "ps"]
+                valid_platforms = ["steam", "playstation", "psn", "ps", "nintendo", "switch"]
                 if platform not in valid_platforms:
                     query = f"{platform} {query}"
                     platform = "steam"
@@ -51,7 +51,12 @@ class GameCommands(commands.Cog):
                     return
 
                 # Get display name for platform
-                platform_display = "PlayStation" if platform in ["playstation", "psn", "ps"] else platform.title()
+                if platform in ["playstation", "psn", "ps"]:
+                    platform_display = "PlayStation"
+                elif platform in ["nintendo", "switch"]:
+                    platform_display = "Nintendo"
+                else:
+                    platform_display = platform.title()
 
                 # Create embed
                 embed = discord.Embed(
@@ -59,6 +64,10 @@ class GameCommands(commands.Cog):
                     description=f"**{ctx.author.mention}** Encontrados {len(results)} jogos em {platform_display}",
                     color=discord.Color.blue()
                 )
+
+                # Set main image from first result
+                if results and results[0].get("image_url"):
+                    embed.set_image(url=results[0]["image_url"])
 
                 for i, game in enumerate(results[:5], 1):
                     price_info = "Grátis" if game["current_price"] == 0 else f"R$ {game['current_price']:.2f}"
@@ -99,6 +108,8 @@ class GameCommands(commands.Cog):
                     platform = "gog"
                 elif "playstation.com" in game_url:
                     platform = "playstation"
+                elif "nintendo.com" in game_url:
+                    platform = "nintendo"
 
                 async with AsyncSessionLocal() as session:
                     game_service = GameService(session)
@@ -124,7 +135,7 @@ class GameCommands(commands.Cog):
                     )
 
                     if game_data.get("image_url"):
-                        embed.set_thumbnail(url=game_data["image_url"])
+                        embed.set_image(url=game_data["image_url"])
 
                     # Price information
                     price_info = "Grátis" if game_data["current_price"] == 0 else f"R$ {game_data['current_price']:.2f}"

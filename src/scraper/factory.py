@@ -4,6 +4,7 @@ from typing import Optional
 from .base import BaseScraper
 from .steam import SteamScraper
 from .playstation import PlayStationScraper
+from .nintendo import NintendoScraper
 
 
 class ScraperFactory:
@@ -14,13 +15,15 @@ class ScraperFactory:
         "playstation": PlayStationScraper,
         "psn": PlayStationScraper,  # Alias
         "ps": PlayStationScraper,   # Alias
+        "nintendo": NintendoScraper,
+        "switch": NintendoScraper,  # Alias
         # Add more platforms here in the future
         # "epic": EpicScraper,
         # "gog": GOGScraper,
     }
 
     # Main platforms (without aliases) for display
-    _main_platforms = ["steam", "playstation"]
+    _main_platforms = ["steam", "playstation", "nintendo"]
 
     @classmethod
     def create(cls, platform: str, headless: Optional[bool] = None) -> BaseScraper:
